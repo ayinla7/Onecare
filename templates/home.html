@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Demo</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='mystyle.css') }}">
+
+</head>
+<body>
+    <br><br>
+    <h1> User Account Demo </h1>
+        <br><br><br>
+        <a href = "\enternew">
+        <img src="{{url_for('static', filename='images/signup.jpg')}}" /></a>
+        <a href = "\view">
+        <img src="{{url_for('static', filename='images/signin.jpg')}}" /></a>
+        <a href = "\updatenew">
+        <img src="{{url_for('static', filename='images/update.jpg')}}" /></a>
+        <a href = "\remove">
+        <img src="{{url_for('static', filename='images/delete.jpg')}}" /></a>
+
+</body>
+</html>

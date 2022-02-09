@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Demo</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='mystyle.css') }}">
+</head>
+   <body>
+   <br>
+      <a href = "\">
+      <img src="{{url_for('static', filename='images/home.jpg')}}" /></a>
+      <form action = "{{ url_for('addrec') }}" method = "POST">
+         <br><br>
+         <h1>User Account Demo</h1>
+         <br><br><br>
+         Username
+         <input type = "text" name = "username" /><br><br>
+         Email
+         <input type = "text" name = "email" /><br><br>
+         Password
+         <input type = "password" name = "pass" /><br><br>
+         <input type = "submit" value = "sign up" />
+      </form>
+   </body>
+</html>
