@@ -22,39 +22,39 @@ mysql.init_app(app)
 # decorating index function with the app.route with url as /login
 @app.route('/')
 def home():
-    return render_template('home.html')
+    return render_template('/home.html')
 
 
 @app.route('/enternew')
 def new_user():
-    return render_template('new.html')
+    return render_template('/new.html')
 
 
 @app.route('/view')
 def view_user():
-    return render_template('search.html')
+    return render_template('/search.html')
 
 
 @app.route('/updatenew')
 def update_user():
-    return render_template('update.html')
+    return render_template('/update.html')
 
 
 @app.route('/remove')
 def remove_user():
-    return render_template('remove.html')
+    return render_template('/remove.html')
 
 @app.route('/loginPage')
 def loginPage():
-    return render_template('loginPage.html')
+    return render_template('/loginPage.html')
 
 @app.route('/register')
 def register():
-    return render_template('register.html')
+    return render_template('/register.html')
 
 @app.route('/dashboard')
 def dashboard():
-    return render_template('dashboard.html')
+    return render_template('/dashboard.html')
 
 
 @app.route('/addrec', methods=['POST', 'GET'])
