@@ -44,6 +44,18 @@ def update_user():
 def remove_user():
     return render_template('remove.html')
 
+@app.route('/loginPage')
+def loginPage():
+    return render_template('loginPage.html')
+
+@app.route('/register')
+def register():
+    return render_template('register.html')
+
+@app.route('/dashboard')
+def dashboard():
+    return render_template('dashboard.html')
+
 
 @app.route('/addrec', methods=['POST', 'GET'])
 def addrec():
