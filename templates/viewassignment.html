@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<div class="container mt-5">
+<div class=" row text-center">
+        <div class="col-12 col-xl-8">
+            <div class="card card-body border-0 shadow mb-4">
+                <h2 class="h5 mb-4">ADMINISTERED MEDICATIONS</h2>
+                    <p style="color:red">
+                        {% if msg %}
+                            {{ msg | safe }}
+                        {% endif %}
+                    </p>
+                <form method="post" action="/usage">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <div>
+                                <label for="idtype">Medication ID</label>
+                                <select class="form-select mb-0" id="medid" name="medid" placeholder="Select Staff" aria-label="ID-type select example" required>
+                                    <option value="" selected disabled hidden>Select Medication</option>
+                                    {% for datas in getmedpatients %}
+                                        <option value="{{datas[0]}}">{{datas[0]}}</option>
+                                    {% endfor %}
+                            </select>
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="mt-3" style="float:right">
+                        <button class="btn btn-gray-800 mt-2 animate-up-2" type="submit">ADMINISTERED</button>
+                    </div>
+                </form>
+            </div>
+         </div>
+</div>
+</div>
+
+{% include '/records.html' %}
+
+</body>
+</html>

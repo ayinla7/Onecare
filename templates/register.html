@@ -62,8 +62,12 @@
                                     REGISTER NEW CLIENT
                                 </h1>
                                 <br />
-                                <p>
+                                <p style="color:red">
+                                    {% if msg %}
+                                        {{ msg | safe }}
+                                    {% else %}
                                         Add your credentials
+                                    {% endif %}
                                 </p>
                             </div>
                             <form method="post" action="{{ url_for('addrec') }}" class="mt-4">
@@ -73,7 +77,7 @@
                                         <span class="input-group-text" id="basic-addon1">
                                             <span class="fas fa-user-circle"></span>
                                         </span>
-                                        <input class="form-control" type="text" name = "username" value="" placeholder="Username">
+                                        <input class="form-control" type="text" name = "username" value="" placeholder="Username" required>
                                     </div>
                                 </div>
 
@@ -84,7 +88,7 @@
                                         <span class="input-group-text" id="basic-addon1">
                                             <span class="fas fa-envelope"></span>
                                         </span>
-                                            <input class="form-control" type="Email" name="email" value="" placeholder="Email">
+                                            <input class="form-control" type="Email" name="email" value="" placeholder="Email" required>
                                     </div>
                                 </div>
                                 <!-- End of Form -->
@@ -96,13 +100,15 @@
                                             <span class="input-group-text" id="basic-addon2">
                                                 <span class="fas fa-unlock-alt"></span>
                                             </span>
-                                            <input class="form-control" type="password" name="pass" value="" placeholder="Password">
+                                            <input class="form-control" type="password" name="pass" value="" placeholder="Password" required>
                                         </div>
                                     </div>
                                     <!-- End of Form -->
                                 </div>
                                 <div class="d-grid">
                                     <button type="submit" name="register" class="btn btn-gray-800">ADD NEW CLIENT</button>
+                                    <a href="/dashboard" style="color:blue; margin:10px auto;">Dashboard</a>
+
                                 </div>
                             </form>
                             <br/>
@@ -157,3 +163,42 @@
 <script src="/static/assets/js/volt.js"></script>
 </body>
 </html>
+
+
+# ###################################################################################
+# @app.route('/addrec', methods=['POST', 'GET'])
+# def addrec():
+#     date_time = ""
+#     if request.method == 'POST':
+#         con = mysql.connect()
+#         try:
+#             username = request.form['username']
+#             email = request.form['email']
+#             Password = request.form['pass']
+#
+#             if username and email and Password != "":
+#                 # API for date and time ---------------------------------------------------------------------------
+#                 url = "http://worldtimeapi.org/api/timezone/Europe/London"
+#                 response = requests.get(url).json()
+#                 print("" + str(response))  # response details
+#                 date_time = response["datetime"]  # retrieve response details form the attribute, datetime
+#                 print("" + str(response["datetime"]))  # response details
+#
+#                 # -------------------------------------------------------------------------------------------------
+#
+#                 cur = con.cursor()
+#
+#                 cur.execute('INSERT INTO User (username, email, password)VALUES( %s,  %s, %s)',
+#                             (username, email, Password))
+#
+#                 con.commit()
+#                 msg = "You have signed up today (UK Time)"
+#                 return render_template("dashboard.html", msg=msg, date_time=date_time)
+#                 con.close()
+#             return render_template("register.html", msg="Fill all credentials.")
+#
+#         except:
+#             con.rollback()
+#             msg = "The sign up operation failed."
+#             return render_template("register.html", msg=msg)
+#             con.close()

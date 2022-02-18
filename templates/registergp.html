@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>loginPage</title>
+    <title>Register</title>
+
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta name="title" content="Volt Free Bootstrap Dashboard - Sign up page">
     <meta name="author" content="Themesberg">
@@ -47,9 +48,8 @@
     <link type="text/css" href="/static/assets/css/volt.css" rel="stylesheet">
 </head>
 <body>
-    <br> <br>
 
-        <main>
+    <main>
         <section class="vh-lg-100 mt-5 mt-lg-0 bg-soft d-flex align-items-center">
             <div class="container">
                 <p class="text-center">
@@ -59,19 +59,77 @@
                         <div class="bg-white shadow border-0 rounded border-light p-4 p-lg-5 w-100 fmxw-500">
                             <div class="text-center text-md-center mb-4 mt-md-0">
                                 <h1 class="mb-0 h3">
-                                    PATIENTS LOGIN
+                                    REGISTER NEW GP/HOSPITAL
                                 </h1>
                                 <br />
                                 <p style="color:red">
                                     {% if msg %}
                                         {{ msg | safe }}
                                     {% else %}
-                                        Add your credentials
+                                        Add Hospital/GP details
                                     {% endif %}
                                 </p>
                             </div>
-                            <form method="post" action = "{{ url_for('profile') }}" class="mt-4">
-                                <!-- Form -->
+                            <form method="post" action="{{ url_for('addgp') }}" class="mt-4">
+                                <div class="form-group mb-4">
+                                    <label for="email">NHS REGISTRATION NUMBER</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text" id="basic-addon1">
+                                            <span class="fas fa-user-circle"></span>
+                                        </span>
+                                        <input class="form-control" type="text" name = "gpId" value="" placeholder="NHS Registration number" required>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <div class="form-group mb-4">
+                                    <label for="email">Hospital/GP Name</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text" id="basic-addon1">
+                                            <span class="fas fa-user-circle"></span>
+                                        </span>
+                                        <input class="form-control" type="text" name = "gpname" value="" placeholder="Hospital/GP Name" required>
+                                    </div>
+                                </div>
+                                <div class="form-group mb-4">
+                                    <label for="email">Address line</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text" id="basic-addon1">
+                                            <span class="fas fa-user-circle"></span>
+                                        </span>
+                                        <input class="form-control" type="text" name = "address" value="" placeholder="Address line" required>
+                                    </div>
+                                </div>
+                                <div class="form-group mb-4">
+                                    <label for="email">City</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text" id="basic-addon1">
+                                            <span class="fas fa-user-circle"></span>
+                                        </span>
+                                        <input class="form-control" type="text" name = "city" value="" placeholder="City" required>
+                                    </div>
+                                </div>
+                                <div class="form-group mb-4">
+                                    <label for="email">Postcode</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text" id="basic-addon1">
+                                            <span class="fas fa-user-circle"></span>
+                                        </span>
+                                        <input class="form-control" type="text" name = "postcode" value="" placeholder="Postcode" required>
+                                    </div>
+                                </div>
+                                    </div>
+
+                                    <div class="col-6">
+                                        <div class="form-group mb-4">
+                                    <label for="email">Phone Number</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text" id="basic-addon1">
+                                            <span class="fas fa-user-circle"></span>
+                                        </span>
+                                        <input class="form-control" type="text" name = "phone" value="" placeholder="Phone Number" required>
+                                    </div>
+                                </div>
                                 <div class="form-group mb-4">
                                     <label for="email">Username</label>
                                     <div class="input-group">
@@ -79,6 +137,17 @@
                                             <span class="fas fa-user-circle"></span>
                                         </span>
                                         <input class="form-control" type="text" name = "username" value="" placeholder="Username" required>
+                                    </div>
+                                </div>
+
+                                <!-- Form -->
+                                <div class="form-group mb-4">
+                                    <label for="email">Your Email</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text" id="basic-addon1">
+                                            <span class="fas fa-envelope"></span>
+                                        </span>
+                                            <input class="form-control" type="Email" name="email" value="" placeholder="Email" required>
                                     </div>
                                 </div>
                                 <!-- End of Form -->
@@ -94,21 +163,14 @@
                                         </div>
                                     </div>
                                     <!-- End of Form -->
-                                    <div class="d-flex justify-content-between align-items-top mb-4">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="" id="remember">
-                                            <label class="form-check-label mb-0" for="remember">
-                                              Remember me
-                                            </label>
-                                        </div>
-                                        <div><a href="/page-forgot-password.html" class="small text-right">Lost password?</a></div>
-                                    </div>
+                                </div>
+                                 </div>
                                 </div>
                                 <div class="d-grid">
-                                    <button type="submit" name="login" class="btn btn-gray-800">Sign IN</button>
+                                    <button type="submit" name="register" class="btn btn-gray-800">REGISTER</button>
                                 </div>
                             </form>
-                            <br />
+                            <br/>
                         </div>
                     </div>
                 </div>
@@ -117,8 +179,7 @@
     </main>
 
 
-
-
+//////////
 <!-- Core -->
 <script src="/static/assets/vendor/@popperjs/core/dist/umd/popper.min.js"></script>
 <script src="/static/assets/vendor/bootstrap/dist/js/bootstrap.min.js"></script>
@@ -159,6 +220,5 @@
 
 <!-- Volt JS -->
 <script src="/static/assets/js/volt.js"></script>
-
 </body>
 </html>

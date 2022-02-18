@@ -1,0 +1,114 @@
+{% extends "layouts/base.html" %}
+
+{% block title %} Transactions {% endblock %} 
+
+<!-- Specific Page CSS goes HERE  -->
+{% block stylesheets %}{% endblock stylesheets %}
+
+{% block content %}
+
+
+  <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center py-4">
+      <div class="d-block mb-4 mb-md-0">
+          <h2 class="h4">Staff Records</h2>
+          <p class="mb-0">List of all members of staff</p>
+      </div>
+      <div class="btn-toolbar mb-2 mb-md-0">
+          <a href="/registerstaff" class="btn btn-sm btn-gray-800 d-inline-flex align-items-center">
+              <svg class="icon icon-xs me-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+              New Staff
+          </a>
+      </div>
+  </div>
+  
+  <div class="card card-body border-0 shadow table-wrapper table-responsive">
+      <table class="table table-hover">
+          <thead>
+              <tr>
+                  <th class="border-gray-200">#</th>
+                  <th class="border-gray-200">First Name</th>
+                  <th class="border-gray-200">Second Name</th>
+                  <th class="border-gray-200">Email</th>
+                  <th class="border-gray-200">Gender</th>
+                  <th class="border-gray-200">Date Added</th>
+                  <th class="border-gray-200">Status</th>
+              </tr>
+          </thead>
+          <tbody>
+              <!-- Item -->
+
+
+          {% if countstaffs > 0 %}
+                 {% for datas in getstaffs %}
+                  <tr>
+                      <form action="/meds" method="POST">
+                      <input type="text" name="medpatientId" id="medpatientId" value="{{datas[0]}}" hidden>  </input>
+                      {% for data in datas %}
+                      <td>
+                          <a class="fw-bold">
+                              {{ data }}
+                          </a>
+                      </td>
+                      {% endfor %}
+                      <td>
+                          <button class="btn btn-gray-800" type="submit">Profile</button>
+                      </td>
+                      </form>
+                  </tr>
+                  {% endfor %}
+          {% else %}
+             {% endif %}
+          </tbody>
+      </table>
+      <div class="card-footer px-3 border-0 d-flex flex-column flex-lg-row align-items-right justify-content-end">
+          <div class="fw-normal small mt-4 mt-lg-0">Total : {{ countstaffs }} </div>
+      </div>
+  </div>
+
+
+
+
+<!-- Core -->
+<script src="/static/assets/vendor/@popperjs/core/dist/umd/popper.min.js"></script>
+<script src="/static/assets/vendor/bootstrap/dist/js/bootstrap.min.js"></script>
+
+<!-- Vendor JS -->
+<script src="/static/assets/vendor/onscreen/dist/on-screen.umd.min.js"></script>
+
+<!-- Slider -->
+<script src="/static/assets/vendor/nouislider/distribute/nouislider.min.js"></script>
+
+<!-- Smooth scroll -->
+<script src="/static/assets/vendor/smooth-scroll/dist/smooth-scroll.polyfills.min.js"></script>
+
+<!-- Charts -->
+<script src="/static/assets/vendor/chartist/dist/chartist.min.js"></script>
+<script src="/static/assets/vendor/chartist-plugin-tooltips/dist/chartist-plugin-tooltip.min.js"></script>
+
+<!-- Datepicker -->
+<script src="/static/assets/vendor/vanillajs-datepicker/dist/js/datepicker.min.js"></script>
+
+<!-- Sweet Alerts 2 -->
+<script src="/static/assets/vendor/sweetalert2/dist/sweetalert2.all.min.js"></script>
+
+<!-- Moment JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.27.0/moment.min.js"></script>
+
+<!-- Vanilla JS Datepicker -->
+<script src="/static/assets/vendor/vanillajs-datepicker/dist/js/datepicker.min.js"></script>
+
+<!-- Notyf -->
+<script src="/static/assets/vendor/notyf/notyf.min.js"></script>
+
+<!-- Simplebar -->
+<script src="/static/assets/vendor/simplebar/dist/simplebar.min.js"></script>
+
+<!-- Github buttons -->
+<script async defer src="https://buttons.github.io/buttons.js"></script>
+
+<!-- Volt JS -->
+<script src="/static/assets/js/volt.js"></script>
+{% endblock content %}
+
+<!-- Specific Page JS goes HERE  -->
+{% block javascripts %}{% endblock javascripts %}
