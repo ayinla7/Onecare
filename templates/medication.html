@@ -7,21 +7,17 @@
 
 {% block content %}
 
-{% include 'includes/patientprofilebasic.html' %}
+{% for category, message in get_flashed_messages(with_categories=True) %}
+    <div class="alert alert-{{category}}">{{ message }}</div>
+{% endfor %}
 
+{% include 'includes/patientprofilebasic.html' %}
 
 <div class="container rounded bg-white mt-2 pt-3 pb-3 mb-3">
 <form action="/addmedication" method="post">
     <div class="row">
         <div class=" text-md-center mb-2">
             <h2 class="h5 mb-4"> Medications </h2>
-            <p style="color:red">
-                {% if msg %}
-                    {{ msg | safe }}
-                {% else %}
-
-                {% endif %}
-            </p>
         </div>
         <div class="col-md-6 mb-3">
             <div>

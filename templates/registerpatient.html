@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Patient Sign Up</title>
+
+    {% include 'includes/header.html' %}
+
+    <title>Patient Registration</title>
 
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta name="title" content="Volt Free Bootstrap Dashboard - Sign up page">
@@ -50,17 +53,12 @@
 <body>
 <br>
     <div class="container position-relative">
-        <div class="text-center text-md-center mb-4 mt-md-0">
-            <h1 class="mb-0 h3">
-                PATIENT SIGN UP
-            </h1>
+        <div class="text-center text-md-center mb-1 mt-md-0">
             <br />
             <p style="color:red">
-                {% if msg %}
-                    {{ msg | safe }}
-                {% else %}
-                    Add Hospital/GP details
-                {% endif %}
+                {% for category, message in get_flashed_messages(with_categories=True) %}
+                    <div class="alert alert-{{category}}">{{ message }}</div>
+                {% endfor %}
             </p>
         </div>
 
@@ -118,7 +116,7 @@
                         <div class="col-md-6 mb-3">
                             <label for="gender">Gender</label>
                             <select class="form-select mb-0" id="gender" name="gender" aria-label="Gender select example" required>
-                                <option selected>Gender</option>
+                                <option value="" selected disabled hidden>Gender</option>
                                 <option value="Female">Female</option>
                                 <option value="Male">Male</option>
                             </select>
@@ -165,10 +163,24 @@
 
                     <h2 class="h5 my-4">Health Status</h2>
                     <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <div>
+                                <label for="idtype">Vaccination</label>
+                                <select class="form-select mb-0" id="Vaccination" name="Vaccination" placeholder="Vaccination" aria-label="Vaccination select example" required>
+                                    <option value="" selected disabled hidden>Vaccination</option>
+                                    <option value="None"> None </option>
+                                    <option value="Partially Vaccinated (First Shot)"> Partially Vaccinated (First Shot) </option>
+                                    <option value="Vaccinated (Second Shot)"> Vaccinated (Second Shot) </option>
+                                    <option value="Fully Vaccinated (Booster Shot)"> Fully Vaccinated (Booster Shot) </option>
+
+                            </select>
+                            </div>
+                        </div>
                         <div class="col-md-6 mb-3">
                             <div>
                                 <label for="idtype">Genotype</label>
                                 <select class="form-select mb-0" id="genotype" name="genotype" placeholder="Genotype" aria-label="genotype select example" required>
+                                    <option value="" selected disabled hidden>Genotype</option>
                                     <option value="AA"> AA </option>
                                     <option value="AS"> AS </option>
                                     <option value="SS"> SS </option>
@@ -181,6 +193,7 @@
                             <div>
                                 <label for="idtype">Blood group</label>
                                 <select class="form-select mb-0" id="bloodgroup" name="bloodgroup" placeholder="Blood group" aria-label="bloodgroup select example" required>
+                                    <option value="" selected disabled hidden>Blood group</option>
                                     <option value="A+">    A RhD positive (A+) </option>
                                     <option value="A-">    A RhD negative (A-) </option>
                                     <option value="B+">    B RhD positive (B+) </option>
@@ -224,8 +237,8 @@
                     </div>
 
 
-                    <div class="mt-3" style="float:right">
-                        <button class="btn btn-gray-800 mt-2 animate-up-2" type="submit"> Sign up</button>
+                    <div class="mt-3">
+                        <button class="btn btn-gray-800 mt-2 animate-up-2" style="width:100%" type="submit"> Sign up</button>
                     </div>
                 </form>
             </div>

@@ -1,65 +1,184 @@
 # importing flask module fro
-from flask import (Flask, render_template, request, redirect,send_file, session, jsonify, json)
+from flask import (Flask, render_template, request, redirect,send_file, session, jsonify, json, flash)
 from flaskext.mysql import MySQL
 from flask_qrcode import QRcode
-#from flask_mysqldb import MySQL
-from array import *
-import requests  # for API example
-import urllib.parse  # for API example
+from flask_bcrypt import Bcrypt
+import requests # for API example
+import datetime
 
+bcrypt = Bcrypt()
 mysql = MySQL()
 
 # initializing a variable of Flask
 app = Flask(__name__)
 
+#Initializing QRCode
 qrcode = QRcode(app)
-app.secret_key = 'ItShouldBeAnythingButSecret'     #you can set any secret key but remember it should be secret
+app.secret_key = 'CouldbeAnything'     #you can set any secret key but remember it should be secret
 
-url_temp='https://api.covid19api.com/summary/' #api link
+url_covid='https://api.covid19api.com/summary/' #NHS Covid api link
 
-# MySQL configurations
-# USing SQL WORKBENCH
-app.config['MYSQL_DATABASE_USER'] = 'root'
-app.config['MYSQL_DATABASE_PASSWORD'] = 'Kwamxzdyn1596.'
-app.config['MYSQL_DATABASE_DB'] = 'Example'
-app.config['MYSQL_DATABASE_HOST'] = 'localhost'
+
+ # MySQL configurations
+ # USing SQL WORKBENCH
+ app.config['MYSQL_DATABASE_USER'] = 'root'
+ app.config['MYSQL_DATABASE_PASSWORD'] = ''
+ app.config['MYSQL_DATABASE_DB'] = 'OneCare'
+ app.config['MYSQL_DATABASE_HOST'] = 'localhost'
 
 mysql.init_app(app)
 
-# decorating index function with the app.route with url as /login
+# Accessing the landing page and updating datebase and Current date
 @app.route('/', methods=["GET"])
 def home():
-    update()
     date()
+    update()
     return render_template('index.html')
 
-@app.route('/enternew')
-def new_user():
-    return render_template('/new.html')
+#Generate BARCODE
+@app.route("/qrcode", methods=["GET"])
+def get_qrcode():
+    # please get /qrcode?data=<qrcode_data>
+    data = request.args.get("data", "")
+    return send_file(qrcode(data, mode="raw"), mimetype="image/png")
+#################################################
 
-@app.route('/updatenew')
-def update_user():
-    return render_template('/update.html')
+# Open Staff profile
+@app.route('/profilest')
+def profilestaff():
+    if 'staffuser' in session: # here we are checking whether the user is logged in or not
+        return render_template("profilestaff.html", gpd=gpds(),
+                           getassignments=getassignmentsbasic2(session['staffId']),
+                           countassignments=countassignmentsbasic2(session['staffId']),
+                               title="Care-giver Profile", command="/profilest")
 
-@app.route('/remove')
-def remove_user():
-    return render_template('/remove.html')
-##############
+    return render_template("page-404.html")  # if the user is not in the session
 
-def loginpages(page,msg):
-    return render_template('/'+ page + '.html', msg=msg)
-################
+#View Staff profile
+@app.route('/loginstaff', methods=['POST', 'GET'])
+def loginstaff():
+    clearSession() #Clear previous sessions
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['pass']
+
+        con = mysql.connect()
+        cur = con.cursor()
+        cur.execute('SELECT count(*) FROM staffsdetails WHERE username=%s AND status="ACTIVE"',
+                    (username)) #count all with same username and Actice status
+        count = cur.fetchall()
+
+        con.commit()
+
+        if count[-1][-1] > 0:
+            cur.execute('SELECT password FROM staffsdetails WHERE username=%s AND status="ACTIVE"',
+                        (username)) #Select password with same username and Actice status
+            hash = cur.fetchall()
+
+            authpass = bcrypt.check_password_hash(hash[-1][-1], password)  #Compare Hashed password to newly inputed password
+            con.commit()
+            if authpass:
+                cur.execute('select staffId,gpId,email from staffsdetails WHERE username=%s AND status="ACTIVE"',
+                        (username)) #Select staffId,gpId,email with same username and Actice status
+
+                gp = cur.fetchall()
+                con.commit()
+
+                session['email'] = gp[-1][2]
+                session['staffId'] = gp[-1][0]
+                session['gpId'] = gp[-1][1]
+                session['staffuser'] = username
+                session['logged'] = "staff"
+
+                msg = "<h1>You are signed In as Staff</h1>"
+                return profilestaff() #Call Function to open staff profile
+            else:
+                msg = "Incorrect password or username. Try Again!"
+                flash(msg, "error")
+                return loginpages("loginstaffpage", "","Care-giver Sign in") # Wrong password entered
+        else:
+            #print("Failed!")
+            msg = "Incorrect password or username. Try Again!"
+            flash(msg, "error")
+            return loginpages("loginstaffpage", "","Care-giver Sign in") # Wrong password entered
+
+        con.close()
+
+
+#View Patients profile
+@app.route('/profile', methods=['POST', 'GET'])
+def profile():
+    clearSession() #Clear previous sessions
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['pass']
+        con = mysql.connect()
+        cur = con.cursor()
+        cur.execute('SELECT count(*) FROM patientsdetails WHERE username=%s AND status="ACTIVE"',
+                    (username)) #count all with same username and Actice status
+        count = cur.fetchall()
+
+        con.commit()
+
+        if count[-1][-1] > 0:
+            cur.execute('SELECT password FROM patientsdetails WHERE username=%s AND status="ACTIVE"',
+                        (username)) #Select password with same username and Actice status
+            hash = cur.fetchall()
+
+            authpass = bcrypt.check_password_hash(hash[-1][-1], password) #Compare Hashed password to newly inputed password
+            con.commit()
+            if authpass:
+                session['patientuser'] = username
+                cur.execute('SELECT gpid,nhsid FROM patientsdetails WHERE username=%s AND status="ACTIVE"',
+                            (username)) #Select gpId,nhsId with same username and Actice status
+                result = cur.fetchall()
+                session['gpId'] = result[0][0]
+                session['nhsId'] = result[0][1]
+                session['logged'] = "patient"
+
+
+                return profilepatient() #Call Function to open patient profile
+            else:
+                msg = "Incorrect password or username. Try Again!"
+                flash(msg, "error")
+                return loginpages("loginPage", "","Patient Sign in")  # Wrong password entered
+
+        else:
+            msg = "Incorrect password or username. Try Again!"
+            flash(msg, "error")
+            return loginpages("loginPage", "", "Patient Sign in")  # Wrong password entered
+        con.close()
+    return render_template("page-404.html")
+
+#Method to open Patient Profile
+@app.route('/profile')
+def profilepatient():
+    if 'patientuser' in session:         # here we are checking whether the user is logged in or not
+
+        return render_template("profilepatient.html", gpd=gpd(),
+                           getassignments=getassignmentsbasic(session['nhsId']),
+                           countassignments=countassignmentsbasic(session['nhsId']),
+                               title="Patient Profile", command="/profile")
+    return render_template("page-404.html")  # if the user is not in the session
+
+
+
+
+
+def loginpages(page,msg,title):
+    return render_template('/'+ page + '.html', msg=msg, title=title)
+
 @app.route('/loginstaffpage')
 def loginstaffpage():
-    return loginpages("loginstaffpage", "")
+    return loginpages("loginstaffpage", "", "Care-giver Sign in")
 
 @app.route('/loginPage')
 def loginPage():
-    return loginpages("loginPage", "")
+    return loginpages("loginPage", "", "Patients Sign in")
 
 @app.route('/logingppage')
 def logingppage():
-    return loginpages("logingp", "")
+    return loginpages("logingp", "", "Admin Sign in")
 ##############################
 
 @app.route('/registergp')
@@ -68,8 +187,26 @@ def registergp():
 
 @app.route('/registerpatient')
 def registerpatient():
-    return render_template('registerpatient.html', gpnames=gpnames())
+    con = mysql.connect()
+    cur = con.cursor()
+    cur.execute('SELECT count(*) FROM gpdetails WHERE status="ACTIVE"')
+    count = cur.fetchall()
 
+    con.commit()
+    #print(count[-1][-1])
+
+    if count[-1][-1] > 0:
+        #print("Successful!")
+        cur.execute('select gpId,gpName from gpdetails WHERE status="ACTIVE"')
+
+        gpnames = cur.fetchall()
+        con.commit()
+
+        #print(gpnames)
+        return render_template('registerpatient.html', gpnames=gpnames, title="Patient Registration")
+    else:
+        return "<h1>GPs do not exist yet, Try later.</h1>"
+    con.close()
 
 @app.route('/register')
 def register():
@@ -86,66 +223,21 @@ def registerstaff():
 @app.route('/dashboard')
 def dashboard():
     if 'user' in session:
-        return render_template("home/dashboard.html", user=session['user'], gpname=session['gpname'], countpatients=countpatients(), countstaffs=countstaffs())
+        countcovid()
+        return render_template("home/dashboard.html", user=session['user'],
+                               gpname=session['gpname'], countpatients=countpatients(),
+                               countstaffs=countstaffs(), countcovid=countcovid())
+
         # here we are checking whether the user is logged in or not
     return render_template("page-404.html")  # if the user is not in the session
 
 @app.route('/staffview')
 def staffview():
     if 'user' in session:
-        return render_template("home/staffview.html", user=session['user'], gpname=session['gpname'], getstaffs=getstaffs(), countstaffs=countstaffs() )
+        return render_template("home/staffview.html", user=session['user'],
+                               gpname=session['gpname'], getstaffs=getstaffs(), countstaffs=countstaffs() )
         # here we are checking whether the user is logged in or not
     return render_template("page-404.html")  # if the user is not in the session
-
-@app.route('/profile')
-def profilepatient():
-    if 'patientuser' in session:
-        return render_template("profilepatient.html", gpd=gpd(),
-                           getassignments=getassignmentsbasic(session['nhsId']),
-                           countassignments=countassignmentsbasic(session['nhsId']))
-        # here we are checking whether the user is logged in or not
-    return render_template("page-404.html")  # if the user is not in the session
-
-@app.route('/records')
-def records():
-    if 'patientuser' in session:
-        return render_template('records.html', getmedpatients=getmedpatients(session['nhsId']),
-                               countmedpatients=countmedpatients(session['nhsId']))
-
-        # here we are checking whether the user is logged in or not
-    return render_template("page-404.html")  # if the user is not in the session
-
-@app.route('/profilest')
-def profilestaff():
-    if 'staffuser' in session:
-        return render_template("profilestaff.html", gpd=gpds(),
-                           getassignments=getassignmentsbasic2(session['staffId']),
-                           countassignments=countassignmentsbasic2(session['staffId']))
-        # here we are checking whether the user is logged in or not
-    return render_template("page-404.html")  # if the user is not in the session
-
-@app.route('/view', methods=['POST', 'GET'])
-def view():
-    if 'staffuser' in session:
-        con = mysql.connect()
-        cur = con.cursor()
-        cur.execute('SELECT count(*) FROM assignstaff WHERE dateassigned=%s AND status=%s',
-                    (date(), "ASSIGNED"))
-        count = cur.fetchall()
-        con.commit()
-        if count[0][0] > 0:
-            cur.execute('SELECT nhsid FROM assignstaff WHERE dateassigned=%s AND status=%s',
-                        (date(), "ASSIGNED"))
-            result = cur.fetchall()
-            con.commit()
-            session['nhsId'] =  result[0][0]
-            return render_template('viewassignment.html', getmedpatients=getmedpatients(session['nhsId']),
-                                   countmedpatients=countmedpatients(session['nhsId']))
-        else:
-            msg = "No Assigments available!"
-            return msg
-    return render_template("page-404.html")  # if the user is not in the session
-
 
 @app.route('/patientview')
 def patientview():
@@ -154,10 +246,67 @@ def patientview():
         # here we are checking whether the user is logged in or not
     return render_template("page-404.html")  # if the user is not in the session
 
+
+#Method to open Patient Profile
+@app.route('/profile')
+def profilepatient():
+    if 'patientuser' in session:         # here we are checking whether the user is logged in or not
+
+        return render_template("profilepatient.html", gpd=gpd(),
+                           getassignments=getassignmentsbasic(session['nhsId']),
+                           countassignments=countassignmentsbasic(session['nhsId']),
+                               title="Patient Profile", command="/profile")
+    return render_template("page-404.html")  # if the user is not in the session
+
+
+@app.route('/records')
+def records():
+    if 'patientuser' in session:
+        return render_template('records.html', getmedpatients=getmedpatients(session['nhsId']),
+                               countmedpatients=countmedpatients(session['nhsId']),
+                            title="Medical Records", command="/profile")
+
+        # here we are checking whether the user is logged in or not
+    return render_template("page-404.html")  # if the user is not in the session
+
+
+@app.route('/view', methods=['POST', 'GET'])
+def view():
+    if 'staffuser' in session:
+        con = mysql.connect()
+        cur = con.cursor()
+        cur.execute('SELECT count(*) FROM assignstaff WHERE dateassigned=%s AND status=%s AND staffid=%s',
+                    (date(), "ASSIGNED", session['staffId']))
+        count = cur.fetchall()
+        con.commit()
+        if count[0][0] > 0:
+            cur.execute('SELECT nhsid FROM assignstaff WHERE dateassigned=%s AND status=%s AND staffid=%s',
+                        (date(), "ASSIGNED",session['staffId']))
+            result = cur.fetchall()
+            con.commit()
+            session['nhsId'] =  result[0][0]
+            # #print("View")
+
+            # #print("staff is " + session['staffId'])
+            # #print("patient is " + session['nhsId'])
+
+            return render_template('viewassignment.html', getmedpatients=getmedpatients(session['nhsId']),
+                                   countmedpatients=countmedpatients(session['nhsId']),
+                                   title="Medication", command="/profilest")
+        else:
+            msg = "No Assignments available!"
+            flash(msg, "error")
+            return redirect("/profilest")
+
+    return render_template("page-404.html")  # if the user is not in the session
+
+
 @app.route('/settings')
 def settings():
     if 'user' in session:
-        return render_template("home/settings.html", gpnames=gpnames(), staffId=unassignedstaffs(),nhsId=unassignedpatients(), getassignments=getassignments(), countassignments=countassignments())
+        return render_template("home/settings.html", gpnames=gpnames(),
+                               staffId=unassignedstaffs(),nhsId=unassignedpatients(),
+                               getassignments=getassignments(), countassignments=countassignments())
         # here we are checking whether the user is logged in or not
     return render_template("page-404.html")  # if the user is not in the session
 
@@ -173,7 +322,6 @@ def logout():
     return redirect('/')  # if the user is not in the session
 
 #Add NEW GP
-###################################################################################
 @app.route('/addgp', methods=['POST', 'GET'])
 def addgp():
     date_time = ""
@@ -192,7 +340,7 @@ def addgp():
         dateadded = date()
         status = "ACTIVE"
 
-        print(date())
+        # #print(date())
         cur = con.cursor()
 
         cur.execute('SELECT count(*) FROM gpdetails WHERE gpId=%s ',
@@ -200,7 +348,7 @@ def addgp():
         count = cur.fetchall()
 
         con.commit()
-        print(count[-1][-1])
+        #print(count[-1][-1])
         if count[-1][-1] == 0:
             cur.execute(
                 'INSERT INTO gpdetails (gpId, gpname, address, city, postcode, phone, username, email, password, dateadded, status)VALUES( %s, %s,  %s, %s, %s,  %s, %s , %s, %s,  %s, %s)',
@@ -215,7 +363,6 @@ def addgp():
 
 
 #Add Staff
-###################################################################################
 @app.route('/addstaff', methods=['POST', 'GET'])
 def addstaff():
     date_time = ""
@@ -236,7 +383,7 @@ def addstaff():
             con.commit()
             idkey = key[-1][-1]
 
-        print(idkey)
+        #print(idkey)
         staffId = session['gpId'] +"-"+ str(int(idkey)+1)
         fname = request.form['fname']
         lname = request.form['lname']
@@ -246,7 +393,7 @@ def addstaff():
         phone = request.form['phone']
         username = request.form['username']
         email = request.form['email']
-        password = request.form['pass']
+        password = bcrypt.generate_password_hash(request.form['pass'])
         gender = request.form['gender']
         idtype = request.form['idtype']
         idnumber = request.form['idnumber']
@@ -255,116 +402,23 @@ def addstaff():
         dateadded = date()
         status = "ACTIVE"
 
-        print(date())
+        #print(date())
 
 
-        print("email " + session['email'])
-        print("name " + session['gpname'])
-        print("Id " + session['gpId'])
+        #print("email " + session['email'])
+        #print("name " + session['gpname'])
+        #print("Id " + session['gpId'])
 
         cur.execute('INSERT INTO staffsdetails (staffId, fname, lname, address, city, postcode, phone, username, email, password, gender, idtype, idnumber, gpid, dob, dateadded, status)VALUES( %s, %s,  %s, %s, %s,  %s, %s , %s, %s,  %s, %s , %s,  %s, %s, %s,  %s, %s)',
                     (staffId, fname, lname, address, city, postcode, phone, username, email, password, gender, idtype, idnumber, gpid, dob, dateadded, status))
 
         con.commit()
-        msg = "You have signed up today"
-
-        return redirect("/dashboard")
+        msg = "Staff has been Sucessfully Added!"
+        flash(msg, "success")
+        return redirect("/staffview")
         con.close()
-
-
-#login GP Admin
-###################################################################################
-@app.route('/logingp', methods=['POST', 'GET'])
-def logingp():
-    clearSession()
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['pass']
-        con = mysql.connect()
-        cur = con.cursor()
-        cur.execute('SELECT count(*) FROM gpdetails WHERE username=%s AND password=%s AND status="ACTIVE"',
-                    (username, password))
-        count = cur.fetchall()
-
-        con.commit()
-        print(count[-1][-1])
-
-        if count[-1][-1] > 0:
-            print("Successful!")
-
-            cur.execute('select gpname,gpId,email from gpdetails WHERE username=%s AND password=%s AND status="ACTIVE"',
-                    (username, password))
-
-            gp = cur.fetchall()
-            con.commit()
-
-            print("email " + gp[-1][2])
-            print("name " + gp[-1][0])
-            print("Id " + gp[-1][1])
-
-            session['email'] = gp[-1][2]
-            session['gpname'] = gp[-1][0]
-            session['gpId'] = gp[-1][1]
-            session['user'] = username
-
-            # print("email " + session['email'])
-            # print("name " + session['gpname'])
-            # print("Id " + session['gpId'])
-            getstaffs()
-            return dashboard()
-        else:
-            print("Failed!")
-            msg = "Incorrect password or username. Try Again!"
-            return loginpages("logingp", msg)
-        con.close()
-
-
-#login Staff
-###################################################################################
-@app.route('/loginstaff', methods=['POST', 'GET'])
-def loginstaff():
-    clearSession()
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['pass']
-        con = mysql.connect()
-        cur = con.cursor()
-        cur.execute('SELECT count(*) FROM staffsdetails WHERE username=%s AND password=%s AND status="ACTIVE"',
-                    (username, password))
-        count = cur.fetchall()
-
-        con.commit()
-        print(count[-1][-1])
-
-        if count[-1][-1] > 0:
-            print("Successful!")
-            cur.execute('select staffId,gpId,email from staffsdetails WHERE username=%s AND password=%s AND status="ACTIVE"',
-                    (username, password))
-
-            gp = cur.fetchall()
-            con.commit()
-
-            print("email " + gp[-1][2])
-            print("staffId " + gp[-1][0])
-            print("gpId " + gp[-1][1])
-
-            session['email'] = gp[-1][2]
-            session['staffId'] = gp[-1][0]
-            session['gpId'] = gp[-1][1]
-            session['staffuser'] = username
-
-            msg = "<h1>You are signed In as Staff</h1>"
-            return profilestaff()
-        else:
-            print("Failed!")
-            msg = "Incorrect password or username. Try Again!"
-            return loginpages("loginstaffpage", msg)
-
-        con.close()
-########
 
 #Add Patient
-###################################################################################
 @app.route('/addpatient', methods=['POST', 'GET'])
 def addpatient():
     date_time = ""
@@ -403,7 +457,7 @@ def addpatient():
                     phone = request.form['phone']
                     username = request.form['username']
                     email = request.form['email']
-                    password = request.form['pass']
+                    password = bcrypt.generate_password_hash(request.form['pass'])
                     gender = request.form['gender']
                     gpid = request.form['gpId']
                     dob = request.form['dob']
@@ -412,129 +466,182 @@ def addpatient():
                     genotype = request.form['genotype']
                     disabilities = request.form['disabilities']
                     issues = request.form['issues']
+                    Vaccination = request.form['Vaccination']
 
                     dateadded = date()
                     status = "ACTIVE"
 
-                    print(date())
+                    #print(date())
 
-                    cur.execute('INSERT INTO patientsdetails (nhsId, fname, lname, address, city, postcode, phone, username, email, password, gender, bloodgroup, genotype, disabilities, issues, gpid, dob, dateadded, status)VALUES( %s, %s,  %s, %s, %s,  %s, %s , %s, %s,  %s, %s , %s,  %s, %s, %s,  %s, %s,  %s, %s)',
-                                (nhsId, fname, lname, address, city, postcode, phone, username, email, password, gender, bloodgroup, genotype, disabilities, issues, gpid, dob, dateadded, status))
+                    cur.execute('INSERT INTO patientsdetails (nhsId, fname, lname, address, city, postcode, phone, username, email, password, gender, bloodgroup, genotype, disabilities, issues, gpid, dob, dateadded, status,Vaccination)VALUES( %s, %s,  %s, %s, %s,  %s, %s , %s, %s,  %s, %s , %s,  %s, %s, %s,  %s, %s,  %s, %s, %s)',
+                                (nhsId, fname, lname, address, city, postcode, phone, username, email, password, gender, bloodgroup, genotype, disabilities, issues, gpid, dob, dateadded, status, Vaccination))
 
                     con.commit()
-                    msg = "You have signed up today"
-
-                    return "</h1>Successfully registered</h1>"
+                    msg = "You have signed up Successfully... Kindly return to Homepage to Sign in!"
+                    flash(msg, "success")
+                    return redirect("/registerpatient")
                     con.close()
                 else:
                     msg = "Username is not available"
-                    con = mysql.connect()
-                    cur = con.cursor()
-                    cur.execute('SELECT count(*) FROM gpdetails WHERE status="ACTIVE"')
-                    count = cur.fetchall()
-
-                    con.commit()
-                    print(count[-1][-1])
-
-                    if count[-1][-1] > 0:
-                        print("Successful!")
-                        cur.execute('select gpId,gpName from gpdetails WHERE status="ACTIVE"')
-
-                        gpnames = cur.fetchall()
-                        con.commit()
-
-                        print(gpnames)
-                        return render_template('registerpatient.html', gpnames=gpnames, msg=msg)
-                    else:
-                        return "<h1>GPs do not exist yet, Try later.</h1>"
-                    con.close()
-
-
+                    flash(msg, "error")
+                    return redirect("/registerpatient")
             else:
                 msg = "Username is not available"
-                con = mysql.connect()
-                cur = con.cursor()
-                cur.execute('SELECT count(*) FROM gpdetails WHERE status="ACTIVE"')
-                count = cur.fetchall()
-
-                con.commit()
-                print(count[-1][-1])
-
-                if count[-1][-1] > 0:
-                    print("Successful!")
-                    cur.execute('select gpId,gpName from gpdetails WHERE status="ACTIVE"')
-
-                    gpnames = cur.fetchall()
-                    con.commit()
-
-                    print(gpnames)
-                    return render_template('registerpatient.html', gpnames=gpnames, msg=msg)
-                else:
-                    return "<h1>GPs do not exist yet, Try later.</h1>"
-                con.close()
-
+                flash(msg, "error")
+                return redirect("/registerpatient")
         else:
             msg = "Patient with this NHS Number is aleady Exists"
-            con = mysql.connect()
-            cur = con.cursor()
-            cur.execute('SELECT count(*) FROM gpdetails WHERE status="ACTIVE"')
-            count = cur.fetchall()
+            flash(msg, "error")
+            return redirect("/registerpatient")
 
-            con.commit()
-            print(count[-1][-1])
-
-            if count[-1][-1] > 0:
-                print("Successful!")
-                cur.execute('select gpId,gpName from gpdetails WHERE status="ACTIVE"')
-
-                gpnames = cur.fetchall()
-                con.commit()
-
-                print(gpnames)
-                return render_template('registerpatient.html', gpnames=gpnames, msg=msg)
-            else:
-                return "<h1>GPs do not exist yet, Try later.</h1>"
-            con.close()
-
-#login Patients
+#login GP Admin
 ###################################################################################
-@app.route('/profile', methods=['POST', 'GET'])
-def profile():
+@app.route('/logingp', methods=['POST', 'GET'])
+def logingp():
     clearSession()
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['pass']
         con = mysql.connect()
         cur = con.cursor()
-        cur.execute('SELECT count(*) FROM patientsdetails WHERE username=%s AND password=%s AND status="ACTIVE"',
-                    (username,password))
+        cur.execute('SELECT count(*) FROM gpdetails WHERE username=%s AND password=%s AND status="ACTIVE"',
+                    (username, password))
         count = cur.fetchall()
 
         con.commit()
-        print(count[-1][-1])
+        #print(count[-1][-1])
 
         if count[-1][-1] > 0:
-            print("Successful!")
-            session['patientuser'] = username
+            #print("Successful!")
 
-            cur.execute('SELECT gpid,nhsid FROM patientsdetails WHERE username=%s AND password=%s AND status="ACTIVE"',
-                        (username, password))
-            result = cur.fetchall()
-            session['gpId'] = result[0][0]
-            session['nhsId'] = result[0][1]
-            print(session['gpId'])
-            print(session['nhsId'])
-            return profilepatient()
+            cur.execute('select gpname,gpId,email from gpdetails WHERE username=%s AND password=%s AND status="ACTIVE"',
+                    (username, password))
+
+            gp = cur.fetchall()
+            con.commit()
+
+            #print("email " + gp[-1][2])
+            #print("name " + gp[-1][0])
+            #print("Id " + gp[-1][1])
+
+            session['email'] = gp[-1][2]
+            session['gpname'] = gp[-1][0]
+            session['gpId'] = gp[-1][1]
+            session['user'] = username
+            session['logged'] = "admin"
+
+            # #print("email " + session['email'])
+            # #print("name " + session['gpname'])
+            # #print("Id " + session['gpId'])
+            getstaffs()
+            before_request()
+            return dashboard()
         else:
-            print("Failed!")
+            #print("Failed!")
             msg = "Incorrect password or username. Try Again!"
-            return loginpages("loginPage", msg)
+            flash(msg, "error")
+            return loginpages("logingp", "","Admin Sign in")
+        con.close()
+
+
+#View Staff profile
+@app.route('/loginstaff', methods=['POST', 'GET'])
+def loginstaff():
+    clearSession() #Clear previous sessions
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['pass']
+
+        con = mysql.connect()
+        cur = con.cursor()
+        cur.execute('SELECT count(*) FROM staffsdetails WHERE username=%s AND status="ACTIVE"',
+                    (username)) #count all with same username and Actice status
+        count = cur.fetchall()
+
+        con.commit()
+
+        if count[-1][-1] > 0:
+            cur.execute('SELECT password FROM staffsdetails WHERE username=%s AND status="ACTIVE"',
+                        (username)) #Select password with same username and Actice status
+            hash = cur.fetchall()
+
+            authpass = bcrypt.check_password_hash(hash[-1][-1], password)  #Compare Hashed password to newly inputed password
+            con.commit()
+            if authpass:
+                cur.execute('select staffId,gpId,email from staffsdetails WHERE username=%s AND status="ACTIVE"',
+                        (username)) #Select staffId,gpId,email with same username and Actice status
+
+                gp = cur.fetchall()
+                con.commit()
+
+                session['email'] = gp[-1][2]
+                session['staffId'] = gp[-1][0]
+                session['gpId'] = gp[-1][1]
+                session['staffuser'] = username
+                session['logged'] = "staff"
+
+                msg = "<h1>You are signed In as Staff</h1>"
+                return profilestaff() #Call Function to open staff profile
+            else:
+                msg = "Incorrect password or username. Try Again!"
+                flash(msg, "error")
+                return loginpages("loginstaffpage", "","Care-giver Sign in") # Wrong password entered
+        else:
+            #print("Failed!")
+            msg = "Incorrect password or username. Try Again!"
+            flash(msg, "error")
+            return loginpages("loginstaffpage", "","Care-giver Sign in") # Wrong password entered
+
+        con.close()
+
+
+#View Patients profile
+@app.route('/profile', methods=['POST', 'GET'])
+def profile():
+    clearSession() #Clear previous sessions
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['pass']
+        con = mysql.connect()
+        cur = con.cursor()
+        cur.execute('SELECT count(*) FROM patientsdetails WHERE username=%s AND status="ACTIVE"',
+                    (username)) #count all with same username and Actice status
+        count = cur.fetchall()
+
+        con.commit()
+
+        if count[-1][-1] > 0:
+            cur.execute('SELECT password FROM patientsdetails WHERE username=%s AND status="ACTIVE"',
+                        (username)) #Select password with same username and Actice status
+            hash = cur.fetchall()
+
+            authpass = bcrypt.check_password_hash(hash[-1][-1], password) #Compare Hashed password to newly inputed password
+            con.commit()
+            if authpass:
+                session['patientuser'] = username
+                cur.execute('SELECT gpid,nhsid FROM patientsdetails WHERE username=%s AND status="ACTIVE"',
+                            (username)) #Select gpId,nhsId with same username and Actice status
+                result = cur.fetchall()
+                session['gpId'] = result[0][0]
+                session['nhsId'] = result[0][1]
+                session['logged'] = "patient"
+
+
+                return profilepatient() #Call Function to open patient profile
+            else:
+                msg = "Incorrect password or username. Try Again!"
+                flash(msg, "error")
+                return loginpages("loginPage", "","Patient Sign in")  # Wrong password entered
+
+        else:
+            msg = "Incorrect password or username. Try Again!"
+            flash(msg, "error")
+            return loginpages("loginPage", "", "Patient Sign in")  # Wrong password entered
         con.close()
     return render_template("page-404.html")
 
-########
-#Add Client
-###################################################################################
+# #Add Client
+# ###################################################################################
 @app.route('/addrec', methods=['POST', 'GET'])
 def addrec():
     if request.method == 'POST':
@@ -557,7 +664,6 @@ def addrec():
         con.close()
 
 #Staff Assignment
-###################################################################################
 @app.route('/assign', methods=['POST', 'GET'])
 def assign():
     if request.method == 'POST':
@@ -587,19 +693,23 @@ def assign():
 
             if count2[0][0] == 0:
                 cur = con.cursor()
-                print("Successful!")
+                #print("Successful!")
 
                 cur.execute('INSERT INTO assignstaff (assignId,gpId,staffId,nhsId,dateassigned,status) VALUES (%s, %s,  %s,%s, %s,  %s)',
                             (assignId,gpId,staffId,nhsId,dateassigned,"ASSIGNED"))
                 con.commit()
+                msg = "Successfully assigned Care-giver to Patient!"
+                flash(msg, "success")
                 return redirect('/settings')
                 con.close()
             else:
                 msg = "Patient already assigned Caregiver for  "+ dateassigned +" !"
-                return msg
+                flash(msg, "error")
+                return redirect('/settings')
         else:
             msg = "Caregiver already booked for "+ dateassigned +" !"
-            return msg
+            flash(msg, "error")
+            return redirect('/settings')
 #############################
 
 #Open Patients Profile page on dashboard
@@ -610,7 +720,9 @@ def med():
         date()
         session['medpatientId'] = request.form['medpatientId']
         medpatientId = request.form['medpatientId']
-        return render_template('medication.html',gpd=gpdbasic(medpatientId),getassignments=getassignmentsbasic(medpatientId), countassignments=countassignmentsbasic(medpatientId))
+        return render_template('medication.html',gpd=gpdbasic(medpatientId),
+                               getassignments=getassignmentsbasic(medpatientId),
+                               countassignments=countassignmentsbasic(medpatientId))
 
 #Open Staff Profile page on dashboard
 ###################################################################################
@@ -620,11 +732,13 @@ def meds():
         date()
         session['medpatientId'] = request.form['medpatientId']
         medpatientId = request.form['medpatientId']
-        print(medpatientId)
-        return render_template('medication2.html',gpd=gpdbasic2(medpatientId),getassignments=getassignmentsbasic2(medpatientId), countassignments=countassignmentsbasic2(medpatientId))
+        #print(medpatientId)
+        return render_template('medication2.html',gpd=gpdbasic2(medpatientId),
+                               getassignments=getassignmentsbasic2(medpatientId),
+                               countassignments=countassignmentsbasic2(medpatientId))
 
 
-#Action
+#Action - Update Assignment
 ###################################################################################
 @app.route('/action', methods=['POST', 'GET'])
 def action():
@@ -640,6 +754,25 @@ def action():
         con.close()
         return redirect("/settings")
 
+#UpdateVaccination
+###################################################################################
+@app.route('/updatevaccination', methods=['POST', 'GET'])
+def updatevaccination():
+    if request.method == 'POST':
+        Vaccination = request.form['Vaccination']
+
+        con = mysql.connect()
+        cur = con.cursor()
+        cur.execute('UPDATE patientsdetails SET Vaccination=%s WHERE nhsId=%s',
+                    (Vaccination,session['medpatientId']))
+        con.commit()
+        con.close()
+        msg = "Vaccination Status Updated!"
+        flash(msg, "success")
+        medpatientId = session['medpatientId']
+        return render_template('medication.html', gpd=gpdbasic(medpatientId),
+                               getassignments=getassignmentsbasic(medpatientId),
+                               countassignments=countassignmentsbasic(medpatientId))
 
 # medication Prescription
 ###################################################################################
@@ -664,11 +797,20 @@ def addmedication():
             cur.execute('INSERT INTO medication (medId,medname,pres,gpId,nhsId,startdate,enddate,datepres,status) VALUES (%s, %s,  %s,%s, %s,  %s,%s, %s,  %s)',
                         (medId,medname,pres,gpId,nhsId,startdate,enddate,date(),"PRESCRIBED"))
             con.commit()
-            return redirect('/patientview')
+            msg = "Presccription sucessfully Added!"
+            flash(msg, "success")
+            medpatientId = session['medpatientId']
+            return render_template('medication.html', gpd=gpdbasic(medpatientId),
+                                   getassignments=getassignmentsbasic(medpatientId),
+                                   countassignments=countassignmentsbasic(medpatientId))
             con.close()
         else:
             msg = "Invalid Start and End Dates"
-            return loginpages("medication", msg)
+            flash(msg, "error")
+            medpatientId = session['medpatientId']
+            return render_template('medication.html', gpd=gpdbasic(medpatientId),
+                                   getassignments=getassignmentsbasic(medpatientId),
+                                   countassignments=countassignmentsbasic(medpatientId))
 
 
 #Medication usage
@@ -680,90 +822,45 @@ def usage():
             con = mysql.connect()
             cur = con.cursor()
 
+            note= request.form['note']
             medid = request.form['medid']
             nhsId = session['nhsId']
             staffId = session['staffId']
 
-            cur.execute('INSERT INTO medusage (medid,nhsId,staffId,date,time,status) VALUES (%s, %s,  %s,%s, %s, %s)',
-                        (medid,nhsId,staffId,date(),time(),"ADMINISTERED"))
+            cur.execute('INSERT INTO medusage (medid,nhsId,staffId,date,time,status,note) VALUES (%s, %s,  %s,%s, %s, %s, %s)',
+                        (medid,nhsId,staffId,date(),time(),"ADMINISTERED",note))
             con.commit()
 
             msg = "Sucessfully Administered Medication!"
-            return msg
+            flash(msg, "success")
+
+            return redirect("/view")
     return render_template("page-404.html")  # if the user is not in the session
 
 #############################
 
-@app.route('/updaterec', methods=['POST', 'GET'])
-def updaterec():
-    if request.method == 'POST':
-        try:
-            username = request.form['username']
-            password = request.form['pass']
-            email = request.form['email']
-
-            con = mysql.connect()
-            cur = con.cursor()
-            cur.execute('UPDATE User SET email=%s WHERE username=%s AND password=%s',
-                        (email, username, password))
-            con.commit()
-
-            cur.execute('SELECT username, email FROM User WHERE username=%s', username)
-            rows = cur.fetchall()
-            con.commit()
-
-        except:
-            con.rollback()
-
-        finally:
-            return render_template("view.html", rows=rows)
-            con.close()
-
-
-@app.route('/removerec', methods=['POST', 'GET'])
-def removerec():
-    if request.method == 'POST':
-        try:
-            username = request.form['username']
-            password = request.form['pass']
-            con = mysql.connect()
-            cur = con.cursor()
-            cur.execute('DELETE FROM User WHERE username=%s AND password=%s',
-                        (username, password))
-            con.commit()
-
-            cur.execute('SELECT username, email FROM User WHERE username=%s', username)
-            rows = cur.fetchall()
-            con.commit()
-
-        except:
-            con.rollback()
-
-        finally:
-            return render_template("view.html", rows=rows)
-            con.close()
 
 #Fucntions
-# API for date and time ---------------------------------------------------------------------------
+# API for date ---------------------------------------------------------------------------
 def date():
     url = "http://worldtimeapi.org/api/timezone/Europe/London"
     response = requests.get(url).json()
-    #print("" + str(response))  # response details
+    ##print("" + str(response))  # response details
     date_time = response["datetime"]
-    print(date_time)
-    print(date_time[11:16])
+    #print(date_time)
+    #print(date_time[11:16])
     session['date'] = date_time[0:10]# retrieve response details form the attribute, datetime
     return date_time[0:10]  # response details
 
 #Fucntions
-# API for date and time ---------------------------------------------------------------------------
+# API for time ---------------------------------------------------------------------------
 def time():
     url = "http://worldtimeapi.org/api/timezone/Europe/London"
     response = requests.get(url).json()
-    #print("" + str(response))  # response details
+    ##print("" + str(response))  # response details
     date_time = response["datetime"]
-    print(date_time)
-    print(date_time[11:16])
+    #print(date_time)
+    #print(date_time[11:16])
     session['time'] = date_time[11:16]# retrieve response details form the attribute, datetime
     return date_time[11:16]  # response details
 
@@ -775,12 +872,12 @@ def gpd():
     count = cur.fetchall()
 
     con.commit()
-    print(count[-1][-1])
+    #print(count[-1][-1])
 
     if count[-1][-1] > 0:
-        print("Successful!")
+        #print("Successful!")
         cur.execute(
-            'select nhsid,gpId,fname,lname,phone,dob,email, gender,address, city, postcode, bloodgroup, genotype, disabilities, issues,  dateadded, status from patientsdetails WHERE username=%s',
+            'select nhsid,gpId,fname,lname,phone,dob,email, gender,address, city, postcode, bloodgroup, genotype, disabilities, issues,  dateadded, status,Vaccination from patientsdetails WHERE username=%s',
             (session['patientuser']))
         #
         gpd = cur.fetchall()
@@ -798,10 +895,10 @@ def gpds():
     count = cur.fetchall()
 
     con.commit()
-    print(count[-1][-1])
+    #print(count[-1][-1])
 
     if count[-1][-1] > 0:
-        print("Successful!")
+        #print("Successful!")
         cur.execute(
             'select staffid,gpId,fname,lname,phone,dob,email, gender,address, city, postcode,idtype,idnumber,dateadded, status from staffsdetails WHERE username=%s',
             (session['staffuser']))
@@ -821,12 +918,12 @@ def gpdbasic(patientid):
     count = cur.fetchall()
 
     con.commit()
-    print(count[-1][-1])
+    #print(count[-1][-1])
 
     if count[-1][-1] > 0:
-        print("Successful!")
+        #print("Successful!")
         cur.execute(
-            'select nhsid,gpId,fname,lname,phone,dob,email, gender,address, city, postcode, bloodgroup, genotype, disabilities, issues,  dateadded, status from patientsdetails WHERE nhsid=%s AND gpid=%s ',
+            'select nhsid,gpId,fname,lname,phone,dob,email, gender,address, city, postcode, bloodgroup, genotype, disabilities, issues,  dateadded, status,Vaccination from patientsdetails WHERE nhsid=%s AND gpid=%s ',
             (patientid,session['gpId']))
         #
         gpd = cur.fetchall()
@@ -844,10 +941,10 @@ def gpdbasic2(patientid):
     count = cur.fetchall()
 
     con.commit()
-    print(count[-1][-1])
+    #print(count[-1][-1])
 
     if count[-1][-1] > 0:
-        print("Successful!")
+        #print("Successful!")
         cur.execute(
             'select staffid,gpId,fname,lname,phone,dob,email, gender,address, city, postcode,idtype,idnumber,dateadded, status from staffsdetails WHERE staffId=%s',
             (patientid))
@@ -868,10 +965,10 @@ def getstaffs():
     count = cur.fetchall()
 
     con.commit()
-    print(count[-1][-1])
+    #print(count[-1][-1])
 
     if count[-1][-1] > 0:
-        print("Successful!")
+        #print("Successful!")
         cur.execute(
             'select staffid, fname,lname,email, gender, dateadded, status from staffsdetails WHERE gpid=%s',
             (session['gpId']))
@@ -879,8 +976,8 @@ def getstaffs():
         getstaffs = cur.fetchall()
         con.commit()
 
-        print(session['gpId'])
-        print(getstaffs)
+        #print(session['gpId'])
+        #print(getstaffs)
         return getstaffs
     else:
         getstaffs = " "
@@ -895,7 +992,7 @@ def countstaffs():
     countstaffs = cur.fetchall()
 
     con.commit()
-    print(countstaffs[-1][-1])
+    #print(countstaffs[-1][-1])
     return countstaffs[-1][-1]
     con.close()
 
@@ -907,19 +1004,19 @@ def getpatients():
     count = cur.fetchall()
 
     con.commit()
-    print(count[-1][-1])
+    #print(count[-1][-1])
 
     if count[-1][-1] > 0:
-        print("Successful!")
+        #print("Successful!")
         cur.execute(
-            'select NHSid, fname,lname,email, gender,vaccine, dateadded, status from patientsdetails WHERE gpid=%s',
+            'select NHSid, fname,lname,email, gender,Vaccination, dateadded, status from patientsdetails WHERE gpid=%s',
             (session['gpId']))
         #
         getpatients = cur.fetchall()
         con.commit()
 
-        print(session['gpId'])
-        print(getpatients)
+        #print(session['gpId'])
+        #print(getpatients)
         return getpatients
     else:
         getpatients = " "
@@ -934,7 +1031,7 @@ def countpatients():
     countpatients = cur.fetchall()
 
     con.commit()
-    print(countpatients[-1][-1])
+    #print(countpatients[-1][-1])
     return countpatients[-1][-1]
     con.close()
 
@@ -946,10 +1043,10 @@ def getassignments():
     count = cur.fetchall()
 
     con.commit()
-    print(count[-1][-1])
+    #print(count[-1][-1])
 
     if count[-1][-1] > 0:
-        print("Successful!")
+        #print("Successful!")
         cur.execute(
             'select assignid, staffid, nhsid, dateassigned, status from assignstaff WHERE gpid=%s',
             (session['gpId']))
@@ -957,8 +1054,8 @@ def getassignments():
         getpatients = cur.fetchall()
         con.commit()
 
-        print(session['gpId'])
-        print(getpatients)
+        #print(session['gpId'])
+        #print(getpatients)
     else:
         getpatients = " "
     return getpatients
@@ -972,7 +1069,7 @@ def countassignments():
     countpatients = cur.fetchall()
 
     con.commit()
-    print(countpatients[-1][-1])
+    #print(countpatients[-1][-1])
     return countpatients[-1][-1]
     con.close()
 
@@ -984,18 +1081,18 @@ def getassignmentsbasic(mid):
     count = cur.fetchall()
 
     con.commit()
-    print(count[-1][-1])
+    #print(count[-1][-1])
 
     if count[-1][-1] > 0:
-        print("Successful!")
+        #print("Successful!")
         cur.execute('select assignid, staffid, dateassigned, status from assignstaff WHERE gpid=%s AND nhsid=%s',
             (session['gpId'],mid))
         #
         getpatients = cur.fetchall()
         con.commit()
 
-        print(session['gpId'])
-        print(getpatients)
+        #print(session['gpId'])
+        #print(getpatients)
     else:
         getpatients = " "
     return getpatients
@@ -1009,7 +1106,7 @@ def countassignmentsbasic(mid):
     countpatients = cur.fetchall()
 
     con.commit()
-    print(countpatients[-1][-1])
+    #print(countpatients[-1][-1])
     return countpatients[-1][-1]
     con.close()
 
@@ -1021,18 +1118,18 @@ def getassignmentsbasic2(mid):
     count = cur.fetchall()
 
     con.commit()
-    print(count[-1][-1])
+    #print(count[-1][-1])
 
     if count[-1][-1] > 0:
-        print("Successful!")
+        #print("Successful!")
         cur.execute('select assignid, nhsid, dateassigned, status from assignstaff WHERE gpid=%s AND staffid=%s',
             (session['gpId'],mid))
         #
         getpatients = cur.fetchall()
         con.commit()
 
-        print(session['gpId'])
-        print(getpatients)
+        #print(session['gpId'])
+        #print(getpatients)
     else:
         getpatients = " "
     return getpatients
@@ -1046,51 +1143,51 @@ def countassignmentsbasic2(mid):
     countpatients = cur.fetchall()
 
     con.commit()
-    print(countpatients[-1][-1])
+    #print(countpatients[-1][-1])
     return countpatients[-1][-1]
     con.close()
 
 
-# def getassignmentssort(colname, colvalue):
-#     con = mysql.connect()
-#     cur = con.cursor()
-#     cur.execute('SELECT count(*) FROM assignstaff WHERE gpid=%s',
-#                 (session['gpId']))
-#     count = cur.fetchall()
-#
-#     con.commit()
-#     print(count[-1][-1])
-#
-#     if count[-1][-1] > 0:
-#         print("Successful!")
-#         cur.execute(
-#             'select assignid, staffid, nhsid, dateassigned, status from assignstaff WHERE gpid=%s and "'+ colname +'"=%s',
-#             (session['gpId'], colvalue))
-#         #
-#         getpatients = cur.fetchall()
-#         con.commit()
-#
-#         print(session['gpId'])
-#         print(getpatients)
-#     else:
-#         getpatients = " "
-#     return getpatients
-#     con.close()
-#
-# def countassignmentssort(colname, colvalue):
-#     con = mysql.connect()
-#     cur = con.cursor()
-#     cur.execute('SELECT count(*) FROM assignstaff WHERE("'+colname+'"="'+colvalue+'" AND gpId="'+ session['gpId'] +'")')
-#     countpatients = cur.fetchall()
-#
-#     con.commit()
-#
-#     print(session['gpId'])
-#     print(colname)
-#     print(colvalue)
-#     print("countpatients" + str(countpatients[-1][-1]))
-#     return countpatients[-1][-1]
-#     con.close()
+def getassignmentssort(colname, colvalue):
+    con = mysql.connect()
+    cur = con.cursor()
+    cur.execute('SELECT count(*) FROM assignstaff WHERE gpid=%s',
+                (session['gpId']))
+    count = cur.fetchall()
+
+    con.commit()
+    #print(count[-1][-1])
+
+    if count[-1][-1] > 0:
+        #print("Successful!")
+        cur.execute(
+            'select assignid, staffid, nhsid, dateassigned, status from assignstaff WHERE gpid=%s and "'+ colname +'"=%s',
+            (session['gpId'], colvalue))
+        #
+        getpatients = cur.fetchall()
+        con.commit()
+
+        #print(session['gpId'])
+        #print(getpatients)
+    else:
+        getpatients = " "
+    return getpatients
+    con.close()
+
+def countassignmentssort(colname, colvalue):
+    con = mysql.connect()
+    cur = con.cursor()
+    cur.execute('SELECT count(*) FROM assignstaff WHERE("'+colname+'"="'+colvalue+'" AND gpId="'+ session['gpId'] +'")')
+    countpatients = cur.fetchall()
+
+    con.commit()
+
+    #print(session['gpId'])
+    #print(colname)
+    #print(colvalue)
+    #print("countpatients" + str(countpatients[-1][-1]))
+    return countpatients[-1][-1]
+    con.close()
 
 
 def clearSession():
@@ -1104,10 +1201,10 @@ def gpnames():
     count = cur.fetchall()
 
     con.commit()
-    print(count[-1][-1])
+    #print(count[-1][-1])
 
     if count[-1][-1] > 0:
-        print("Successful!")
+        #print("Successful!")
         cur.execute('select gpId,gpName from gpdetails WHERE status="ACTIVE"')
 
         gpnames = cur.fetchall()
@@ -1123,7 +1220,7 @@ def unassignedstaffs():
     con = mysql.connect()
     cur = con.cursor()
 
-    print("Successful!")
+    #print("Successful!")
     cur.execute('select count(*) from staffsdetails WHERE gpId="'+ session['gpId'] +'" AND status="ACTIVE"')
 
     count = cur.fetchall()
@@ -1137,7 +1234,7 @@ def unassignedstaffs():
 
         for staffId in staffIds:
             array1.append(staffId[0])
-    print(array1)
+    #print(array1)
     return array1
     con.close()
 
@@ -1146,13 +1243,13 @@ def unassignedpatients():
     con = mysql.connect()
     cur = con.cursor()
 
-    print("Successful!")
-    print(session['gpId'])
+    #print("Successful!")
+    #print(session['gpId'])
     cur.execute('select count(nhsId) from patientsdetails WHERE status="ACTIVE" AND gpid="'+ session['gpId'] +'"')
 
     count = cur.fetchall()
     con.commit()
-    print(count[0][0])
+    #print(count[0][0])
 
     if count[0][0] > 0:
         cur.execute('select nhsId from patientsdetails WHERE status="ACTIVE" AND gpid="' + session['gpId'] + '"')
@@ -1161,7 +1258,7 @@ def unassignedpatients():
 
         for staffId in staffIds:
             array1.append(staffId[0])
-        print(array1)
+        #print(array1)
     return array1
     con.close()
 
@@ -1185,6 +1282,11 @@ def update():
     updateassign()
     updatemed()
 
+def before_request():
+    session.permanent = True
+    app.permanent_session_lifetime = datetime.timedelta(minutes=6)
+    session.modified = True
+
 
 def getmedpatients(pat):
     con = mysql.connect()
@@ -1194,10 +1296,10 @@ def getmedpatients(pat):
     count = cur.fetchall()
 
     con.commit()
-    print(count[-1][-1])
+    #print(count[-1][-1])
 
     if count[-1][-1] > 0:
-        print("Successful!")
+        #print("Successful!")
         cur.execute(
             'select medid, medname,pres,startdate, enddate, status from medication WHERE gpid=%s AND nhsid=%s ORDER BY medid DESC',
             (session['gpId'],pat))
@@ -1205,8 +1307,8 @@ def getmedpatients(pat):
         getpatients = cur.fetchall()
         con.commit()
 
-        print(session['gpId'])
-        print(getpatients)
+        #print(session['gpId'])
+        #print(getpatients)
         return getpatients
     else:
         getpatients = " "
@@ -1221,20 +1323,49 @@ def countmedpatients(pat):
     countpatients = cur.fetchall()
 
     con.commit()
-    print(countpatients[-1][-1])
+    #print(countpatients[-1][-1])
     return countpatients[-1][-1]
     con.close()
 
+def countcovid():
+    con = mysql.connect()
+    cur = con.cursor()
 
+    cur.execute('SELECT count(*) FROM patientsdetails WHERE gpid=%s AND Vaccination=%s',
+                (session['gpId'], "None"))
+    count = cur.fetchall()
 
+    cur.execute('SELECT count(*) FROM patientsdetails WHERE gpid=%s AND Vaccination=%s',
+                (session['gpId'],"Partially Vaccinated (First Shot)"))
+    count1 = cur.fetchall()
 
-#Generate BARCODE
-@app.route("/qrcode", methods=["GET"])
-def get_qrcode():
-    # please get /qrcode?data=<qrcode_data>
-    data = request.args.get("data", "")
-    return send_file(qrcode(data, mode="raw"), mimetype="image/png")
-#################################################
+    cur.execute('SELECT count(*) FROM patientsdetails WHERE gpid=%s AND Vaccination=%s',
+                (session['gpId'], "Vaccinated (Second Shot)"))
+    count2 = cur.fetchall()
+
+    cur.execute('SELECT count(*) FROM patientsdetails WHERE gpid=%s AND Vaccination=%s',
+                (session['gpId'], "Fully Vaccinated (Booster Shot)"))
+    count3 = cur.fetchall()
+    con.commit()
+
+    total = count[-1][-1]+count1[-1][-1]+count2[-1][-1]+count3[-1][-1]
+    #print("Partially Vaccinated (First Shot) : "+ str(count[-1][-1]))
+    #print("Partially Vaccinated (First Shot) : "+ str(count1[-1][-1]))
+    #print("Partially Vaccinated (First Shot) : "+ str(count2[-1][-1]))
+    #print("Partially Vaccinated (First Shot) : "+ str(count3[-1][-1]))
+    #print("Partially Vaccinated (First Shot) : " + str(total))
+
+    # float("{:.2f}".format())
+    per = ("{:.1f}".format((count[-1][-1]/total) * 100))
+    per1 = ("{:.1f}".format((count1[-1][-1] / total) * 100))
+    per2 = ("{:.1f}".format((count2[-1][-1]/total) * 100))
+    per3 = ("{:.1f}".format((count3[-1][-1] / total) * 100))
+
+    array1 = [per,per1,per2,per3,count[-1][-1],count1[-1][-1],count2[-1][-1],count3[-1][-1]]
+    #print(array1)
+
+    return array1
+    con.close()
 
 if __name__ == "__main__":
     from argparse import ArgumentParser

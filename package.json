@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "io": "^1.0.4",
+    "sweetalert2": "^11.4.4"
+  }
+}

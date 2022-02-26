@@ -13,15 +13,67 @@
             </div>
 
 
+            {% if gpd[0][17] == "None" %}
+            <form method="post" action="/updatevaccination">
+                <div class="row">
+                    <div class="col-md-12 mb-3">
+                        <div>
+                            <label for="idtype">Update Vaccination</label>
+                            <select class="form-select mb-0" id="Vaccination" name="Vaccination" placeholder="Vaccination" aria-label="Vaccination select example" required>
+                                <option value="" selected disabled hidden>Vaccination</option>
+                                <option value="Partially Vaccinated (First Shot)"> Partially Vaccinated (First Shot) </option>
+                                <option value="Vaccinated (Second Shot)"> Vaccinated (Second Shot) </option>
+                                <option value="Fully Vaccinated (Booster Shot)"> Fully Vaccinated (Booster Shot) </option>
+                            </select>
+                        </div>
+                    </div>
+                    <button class="btn btn-gray-800 mt-2 animate-up-2" style="width:100%" type="submit">Update Vaccination status</button>
+                </div>
+            </form>
+
+            {% endif %}
+            {% if gpd[0][17] == "Partially Vaccinated (First Shot)" %}
+            <form method="post" action="/updatevaccination">
+                <div class="row">
+                    <div class="col-md-12 mb-3">
+                        <div>
+                            <label for="idtype">Update Vaccination</label>
+                            <select class="form-select mb-0" id="Vaccination" name="Vaccination" placeholder="Vaccination" aria-label="Vaccination select example" required>
+                                <option value="" selected disabled hidden>Vaccination</option>
+                                <option value="Vaccinated (Second Shot)"> Vaccinated (Second Shot) </option>
+                                <option value="Fully Vaccinated (Booster Shot)"> Fully Vaccinated (Booster Shot) </option>
+                            </select>
+                        </div>
+                    </div>
+                    <button class="btn btn-gray-800 mt-2 animate-up-2" style="width:100%" type="submit">Update Vaccination status</button>
+                </div>
+            </form>
+            {% endif %}
+            {% if gpd[0][17] == "Vaccinated (Second Shot)" %}
+                        <form method="post" action="/updatevaccination">
+                <div class="row">
+                    <div class="col-md-12 mb-3">
+                        <div>
+                            <label for="idtype">Update Vaccination</label>
+                            <select class="form-select mb-0" id="Vaccination" name="Vaccination" placeholder="Vaccination" aria-label="Vaccination select example" required>
+                                <option value="" selected disabled hidden>Vaccination</option>
+                                <option value="Fully Vaccinated (Booster Shot)"> Fully Vaccinated (Booster Shot) </option>
+                            </select>
+                        </div>
+                    </div>
+                    <button class="btn btn-gray-800 mt-2 animate-up-2" style="width:100%" type="submit">Update Vaccination status</button>
+                </div>
+            </form>
+            {% endif %}
         </div>
-        <div class="col-md-5 border-right">
+    <div class="col-md-5 border-right">
             <div class="p-3 py-5">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h4 class="text-right">Patient Profile</h4>
                 </div>
                 <div class="row mt-2">
                     <div class="col-md-6"><label class="labels">NHS Number</label><input type="text" class="form-control" placeholder="NHS" value="{{gpd[0][0]}}" readonly></div>
-                    <div class="col-md-6"><label class="labels">NHS Number</label><input type="text" class="form-control" placeholder="NHS" value="{{gpd[0][1]}}" readonly></div>
+                    <div class="col-md-6"><label class="labels">GP Number </label><input type="text" class="form-control" placeholder="NHS" value="{{gpd[0][1]}}" readonly></div>
                     <div class="col-md-6"><label class="labels">fname</label><input type="text" class="form-control" placeholder="First name" value="{{gpd[0][2]}}" readonly></div>
                     <div class="col-md-6"><label class="labels">lname</label><input type="text" class="form-control" value="{{gpd[0][3]}}" placeholder="Last name" readonly></div>
                 </div>
@@ -46,13 +98,13 @@
         </div>
         <div class="col-md-4">
             <div class="row mt-3">
-                <div class="p-3 py-5 " style="margin-top:15px">
+                <div class="p-3 py-5 " style="margin-top:15px; padding-bottom:0;">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h4 class="text-right"></h4>
                 </div>
-                    <div class="col-md-6"><label class="labels">Blood group</label><input type="text" class="form-control" value="{{gpd[0][11]}}" readonly></div>
+                    <div class="col-md-12"><label class="labels">Blood group</label><input type="text" class="form-control" value="{{gpd[0][11]}}" readonly></div>
                     <br>
-                    <div class="col-md-6"><label class="labels">Genotype</label><input type="text" class="form-control" value="{{gpd[0][12]}}" readonly></div>
+                    <div class="col-md-12"><label class="labels">Genotype</label><input type="text" class="form-control" value="{{gpd[0][12]}}" readonly></div>
                     <br>
                     <div class="col-md-12">
                         <label class="labels">Disabilities</label>
@@ -61,12 +113,15 @@
                     <div class="col-md-12">
                         <label class="labels">Health Issues</label>
                         <textarea class="form-control"  rows="4" cols="30" readonly>{{gpd[0][14]}}</textarea>
+                        <br>
+                        <div class="col-md-12"><input type="text" class="form-control" value="{{gpd[0][17]}}" readonly></div>
+
                     </div>
+
                 </div>
 
-                <div class="row mt-3">
+                <div class="row mt-3" style="margin-bottom:5px;">
                     <div class="col-md-6"><label class="labels">Date Added</label><input type="text" class="form-control" value="{{gpd[0][15]}}" readonly></div>
-                    <br>
                     <div class="col-md-6"><label class="labels">Status</label><input type="text" class="form-control" value="{{gpd[0][16]}}" readonly></div>
                 </div>
             </div>

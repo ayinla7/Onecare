@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Meducal records</title>
+    {% include 'includes/profileheader.html' %}
+
+    <title>{{title}}</title>
 
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta name="title" content="Volt Free Bootstrap Dashboard - Sign up page">
@@ -49,12 +51,6 @@
 
 </head>
 <body>
-
-<div class="row text-center">
-<h1>
-  MEDICATION RECORDS
-</h1>
-</div>
 {% if countmedpatients > 0 %}
 {% for datas in getmedpatients %}
 {% if datas[5] == "PRESCRIBED" %}
@@ -100,6 +96,14 @@
         </div>
 </div>
     {% endfor %}
+    {% else %}
+
+    <div class=" row d-flex align-items-center justify-content-center text-center mt-10">
+    <h4>
+        No Medical Records available!
+        </h4>
+    </div>
+
     {% endif %}
 
 </body>
